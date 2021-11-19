@@ -14,6 +14,7 @@ color = (255,255,255)
 xy_c = [250,150]
 speed_x = 0.1
 speed_y = 0.1
+count = 10
 
 
 while running: #her startes vores whille loop
@@ -23,9 +24,11 @@ while running: #her startes vores whille loop
         y1 = hight-size_paddle_y
     pygame.draw.rect(screen, color, pygame.Rect(1,y1,size_paddle_x,size_paddle_y))
 
+
+
     if y1 > hight-size_paddle_y:
         y1 = hight-size_paddle_y
-    pygame.draw.rect(screen, color, pygame.Rect(width-size_paddle_x,y1,size_paddle_x,size_paddle_y))
+    pygame.draw.rect(screen, color, pygame.Rect(width-size_paddle_x,xy_c[1]-(size_paddle_y/2),size_paddle_x,size_paddle_y))
 
     xy_c[0] = xy_c[0] + speed_x
     xy_c[1] = xy_c[1] + speed_y
@@ -35,15 +38,17 @@ while running: #her startes vores whille loop
 
     pygame.draw.circle(screen, color, xy_c,size_ball)
 
-    if xy_c[0]+size_ball > width-size_paddle_x and xy_c[0]+size_ball > width-size_paddle_x+0.1:
+    if xy_c[0]+size_ball > width-size_paddle_x and count < 0:
+        if xy_c[1]-size_ball < xy_c[1]+size_paddle_y and xy_c[1]+size_ball > xy_c[1]:
+            speed_x = speed_x * (-1)
+            count = 10
+
+    if xy_c[0]-size_ball < 1+size_paddle_x and count < 0:
         if xy_c[1]-size_ball < y1+size_paddle_y and xy_c[1]+size_ball > y1:
             speed_x = speed_x * (-1)
+            count = 10
 
-    if xy_c[0]-size_ball < 1+size_paddle_x and xy_c[0]-size_ball > size_paddle_x+0.9:
-        if xy_c[1]-size_ball < y1+size_paddle_y and xy_c[1]+size_ball > y1:
-            speed_x = speed_x * (-1)
-
-    if xy_c[0]+size_ball > width or xy_c[0]-size_ball < 0:
+    if xy_c[0]+size_ball > width+1 or xy_c[0]-size_ball < 0-1:
         xy_c[0]=1000
         lost_text_field = my_font.render("Game Over", False, color)
         play_again_text = my_font.render("Play Again by clicking your mouse", False, color)
@@ -55,7 +60,8 @@ while running: #her startes vores whille loop
                 xy_c[1] = 150
                 speed_x = 0.1
                 speed_y = 0.1
-
+                count = 10
+    count = count - 1
 
     pygame.display.flip()
     for event in pygame.event.get(): # dette bruges til at stoppe pogramet når man trykker på krydset i pygame vinduet
