@@ -3,114 +3,38 @@ import pygame
 from keras.models import load_model
 from PIL import Image, ImageOps
 import numpy as np
-
-import argparse
-import os
-import sys
-import time
-
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Flatten
-from tensorflow.keras.layers import Conv2D
-from tensorflow.keras.layers import MaxPooling2D
-import os
-import sys
-import subprocess
-
-if sys.platform == 'linux':
-    from gpiozero import CPUTemperature
-
-parser = argparse.ArgumentParser()
-parser.add_argument('-f', '--fullscreen',
-                    help='Display window in full screen', action='store_true')
-parser.add_argument(
-    '-d', '--debug', help='Display debug info', action='store_true')
-parser.add_argument(
-    '-fl', '--flip', help='Flip incoming video signal', action='store_true')
-args = parser.parse_args()
-
-# create model
-model = Sequential()
-
-model.add(Conv2D(32, kernel_size=(3, 3),
-                 activation='relu', input_shape=(48, 48, 1)))
-model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
-
-model.add(Conv2D(128, kernel_size=(3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(128, kernel_size=(3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
-
-model.add(Flatten())
-model.add(Dense(1024, activation='relu'))
-model.add(Dropout(0.5))
-model.add(Dense(7, activation='softmax'))
-
-model.load_weights('model.savedmodel')
-
-# prevents openCL usage and unnecessary logging messages
-cv2.ocl.setUseOpenCL(False)
-
-# dictionary which assigns each label an emotion (alphabetical order)
-emotion_dict = {0: "Angry", 1: "Disgusted", 2: "Fearful",
-                3: "Happy", 4: "Neutral", 5: "Sad", 6: "Surprised"}
-
-def get_gpu_temp():
-    temp = subprocess.check_output(['vcgencmd measure_temp | egrep -o \'[0-9]*\.[0-9]*\''],
-                                   shell=True, universal_newlines=True)
-    return str(float(temp))
-
-# start the webcam feed
-cap = cv2.VideoCapture(0)
-while True:
-    # time for fps
-    start_time = time.time()
-
-    # Find haar cascade to draw bounding box around face
+import cv2
+# Load the model
+model = load_model('keras_model.h5')
+cap = cv2.VideoCapture()
+# The device number might be 0 or 1 depending on the device and the webcam
+cap.open(0, cv2.CAP_DSHOW)
+# Create the array of the right shape to feed into the keras model
+# The 'length' or number of images you can put into the array is
+# determined by the first position in the shape tuple, in this case 1.
+data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
+# Replace this with the path to your image
+while(True):
     ret, frame = cap.read()
-    if args.flip:
-        frame = cv2.flip(frame, -1)
-    if not ret:
-        break
-    facecasc = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = facecasc.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
-
-    for (x, y, w, h) in faces:
-        cv2.rectangle(frame, (x, y-50), (x+w, y+h+10), (255, 0, 0), 2)
-        roi_gray = gray[y:y + h, x:x + w]
-        cropped_img = np.expand_dims(np.expand_dims(
-            cv2.resize(roi_gray, (48, 48)), -1), 0)
-        prediction = model.predict(cropped_img)
-        maxindex = int(np.argmax(prediction))
-        emotion_label = emotion_dict[maxindex]
-        cv2.putText(frame, emotion_label, (x+20, y-60),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-
-    # full screen
-    if args.fullscreen:
-        cv2.namedWindow("video", cv2.WND_PROP_FULLSCREEN)
-        cv2.setWindowProperty("video", cv2.WND_PROP_FULLSCREEN, 1)
-
-    # debug info
-    if args.debug:
-        fps = str(int(1.0 / (time.time() - start_time)))
-        cv2.putText(frame, fps + " fps", (20, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        if sys.platform == 'linux':
-            cpu_temp = str(int(CPUTemperature().temperature)) + " C (CPU)"
-            cv2.putText(frame, cpu_temp, (20, 95), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-            cv2.putText(frame, get_gpu_temp() + " C (GPU)", (20, 130), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-    cv2.imshow('video', cv2.resize(
-        frame, (800, 480), interpolation=cv2.INTER_CUBIC))
+    cv2.imshow('frame', frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+image = Image.open(frame)
+#resize the image to a 224x224 with the same strategy as in TM2:
+#resizing the image to be at least 224x224 and then cropping from the center
+size = (224, 224)
+image = ImageOps.fit(image, size, Image.ANTIALIAS)
 
-cap.release()
-cv2.destroyAllWindows()
+#turn the image into a numpy array
+image_array = np.asarray(image)
+# Normalize the image
+normalized_image_array = (image_array.astype(np.float32) / 127.0) - 1
+# Load the image into the array
+data[0] = normalized_image_array
 
+# run the inference
+prediction = model.predict(data)
+print(prediction)
 
 
 pygame.init() #her intitere vi vores pygame samt vores fonter
@@ -180,3 +104,5 @@ while running: #her startes vores whille loop
     for event in pygame.event.get(): # dette bruges til at stoppe pogramet når man trykker på krydset i pygame vinduet
         if event.type == pygame.QUIT:
             running = False
+cap.release()
+cv2.destroyAllWindows()
