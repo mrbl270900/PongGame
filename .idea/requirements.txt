@@ -1,0 +1,5 @@
+pip modules needed:
+tensorflow
+pygame
+numpy
+opencv-python
