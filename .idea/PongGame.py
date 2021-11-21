@@ -49,7 +49,7 @@ xy_c = [250,150]
 speed_x = 5
 speed_y = 5
 count = 10
-
+y1 = 0
 
 while running: #her startes vores whille loop
     # Choose a suitable font
@@ -82,20 +82,17 @@ while running: #her startes vores whille loop
 
 
     screen.fill((0,0,0))
-    y1 = 0
     if result == 1:
-        y1 = y1 + 1
+        y1 = y1 + 10
     elif result == 2:
-        y1 = y1 - 1
+        y1 = y1 - 10
 
     if y1 > hight-size_paddle_y:
         y1 = hight-size_paddle_y
+    elif y1 < 1:
+        y1 = 1
+
     pygame.draw.rect(screen, color, pygame.Rect(1,y1,size_paddle_x,size_paddle_y))
-
-
-
-    if y1 > hight-size_paddle_y:
-        y1 = hight-size_paddle_y
     pygame.draw.rect(screen, color, pygame.Rect(width-size_paddle_x,xy_c[1]-(size_paddle_y/2),size_paddle_x,size_paddle_y))
 
     xy_c[0] = xy_c[0] + speed_x
