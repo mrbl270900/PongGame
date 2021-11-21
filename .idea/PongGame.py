@@ -83,7 +83,11 @@ while running: #her startes vores whille loop
 
     screen.fill((0,0,0))
     y1 = 0
-    y1 = y1 + result
+    if result == 1:
+        y1 = y1 + 1
+    elif result == 2:
+        y1 = y1 - 1
+
     if y1 > hight-size_paddle_y:
         y1 = hight-size_paddle_y
     pygame.draw.rect(screen, color, pygame.Rect(1,y1,size_paddle_x,size_paddle_y))
