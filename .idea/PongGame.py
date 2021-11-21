@@ -1,41 +1,38 @@
 import pygame
 
-from keras.models import load_model
-from PIL import Image, ImageOps
+import tensorflow.keras
 import numpy as np
 import cv2
+
+import cv2
+
+
+
+def gen_labels():
+    labels = {}
+    with open("labels.txt", "r") as label:
+        text = label.read()
+        lines = text.split("\n")
+        print(lines)
+        for line in lines[0:-1]:
+            hold = line.split(" ", 1)
+            labels[hold[0]] = hold[1]
+    return labels
+
+# Disable scientific notation for clarity
+np.set_printoptions(suppress=True)
+image = cv2.VideoCapture(0)
 # Load the model
-model = load_model('keras_model.h5')
-cap = cv2.VideoCapture()
-# The device number might be 0 or 1 depending on the device and the webcam
-cap.open(0, cv2.CAP_DSHOW)
-# Create the array of the right shape to feed into the keras model
-# The 'length' or number of images you can put into the array is
-# determined by the first position in the shape tuple, in this case 1.
+model = tensorflow.keras.models.load_model('keras_model.h5')
+
+"""
+Create the array of the right shape to feed into the keras model
+The 'length' or number of images you can put into the array is
+determined by the first position in the shape tuple, in this case 1."""
 data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
-# Replace this with the path to your image
-while(True):
-    ret, frame = cap.read()
-    cv2.imshow('frame', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-image = Image.open(frame)
-#resize the image to a 224x224 with the same strategy as in TM2:
-#resizing the image to be at least 224x224 and then cropping from the center
-size = (224, 224)
-image = ImageOps.fit(image, size, Image.ANTIALIAS)
-
-#turn the image into a numpy array
-image_array = np.asarray(image)
-# Normalize the image
-normalized_image_array = (image_array.astype(np.float32) / 127.0) - 1
-# Load the image into the array
-data[0] = normalized_image_array
-
-# run the inference
-prediction = model.predict(data)
-print(prediction)
-
+# A dict that stores the labels
+labels = gen_labels()
+# Load the model
 
 pygame.init() #her intitere vi vores pygame samt vores fonter
 pygame.font.init()
@@ -49,14 +46,44 @@ screen = pygame.display.set_mode([width, hight])
 running = True
 color = (255,255,255)
 xy_c = [250,150]
-speed_x = 0.1
-speed_y = 0.1
+speed_x = 5
+speed_y = 5
 count = 10
 
 
 while running: #her startes vores whille loop
+    # Choose a suitable font
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    ret, frame = image.read()
+    frame = cv2.flip(frame, 1)
+    # In case the image is not read properly
+    if not ret:
+        continue
+    # Draw another rectangle in which the image to labelled is to be shown.
+    frame2 = frame[80:360, 220:530]
+    # resize the image to a 224x224 with the same strategy as in TM2:
+    # resizing the image to be at least 224x224 and then cropping from the center
+    frame2 = cv2.resize(frame2, (224, 224))
+    # turn the image into a numpy array
+    image_array = np.asarray(frame2)
+    # Normalize the image
+    normalized_image_array = (image_array.astype(np.float32) / 127.0) - 1
+    # Load the image into the array
+    data[0] = normalized_image_array
+    pred = model.predict(data)
+    result = np.argmax(pred[0])
+
+    # Print the predicted label into the screen.
+    cv2.putText(frame,  "Label : " +
+                labels[str(result)], (280, 400), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+
+    # Show the frame
+    cv2.imshow('Frame', frame)
+
+
     screen.fill((0,0,0))
-    y1 = pygame.mouse.get_pos()[1]
+    y1 = 0
+    y1 = y1 + result
     if y1 > hight-size_paddle_y:
         y1 = hight-size_paddle_y
     pygame.draw.rect(screen, color, pygame.Rect(1,y1,size_paddle_x,size_paddle_y))
@@ -104,5 +131,5 @@ while running: #her startes vores whille loop
     for event in pygame.event.get(): # dette bruges til at stoppe pogramet når man trykker på krydset i pygame vinduet
         if event.type == pygame.QUIT:
             running = False
-cap.release()
+image.release()
 cv2.destroyAllWindows()
