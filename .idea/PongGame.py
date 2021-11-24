@@ -4,8 +4,6 @@ import tensorflow.keras
 import numpy as np
 import cv2
 
-
-
 def gen_labels():
     labels = {}
     with open("labels.txt", "r") as label:
@@ -121,8 +119,8 @@ while running: #her startes vores whille loop
             if ev.type == pygame.MOUSEBUTTONDOWN:
                 xy_c[0] = 250
                 xy_c[1] = 150
-                speed_x = 0.1
-                speed_y = 0.1
+                speed_x = 5
+                speed_y = 5
                 count = 10
     count = count - 1
 
