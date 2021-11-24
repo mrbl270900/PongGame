@@ -3,6 +3,7 @@ import pygame
 import tensorflow.keras
 import numpy as np
 import cv2
+import logging
 
 def gen_labels():
     labels = {}
@@ -46,6 +47,9 @@ speed_x = 5
 speed_y = 5
 count = 10
 y1 = 0
+bounce = 0
+loged = False
+logging.basicConfig(filename='data.log', level=logging.DEBUG)
 
 while running: #her startes vores whille loop
     # Choose a suitable font
@@ -90,6 +94,8 @@ while running: #her startes vores whille loop
 
     pygame.draw.rect(screen, color, pygame.Rect(1,y1,size_paddle_x,size_paddle_y))
     pygame.draw.rect(screen, color, pygame.Rect(width-size_paddle_x,xy_c[1]-(size_paddle_y/2),size_paddle_x,size_paddle_y))
+    bounce_text = my_font.render(str(bounce) + " Bounces", False, color)
+    screen.blit(bounce_text,(width/2 - 30,25))
 
     xy_c[0] = xy_c[0] + speed_x
     xy_c[1] = xy_c[1] + speed_y
@@ -108,8 +114,12 @@ while running: #her startes vores whille loop
         if xy_c[1]-size_ball < y1+size_paddle_y and xy_c[1]+size_ball > y1:
             speed_x = speed_x * (-1)
             count = 10
+            bounce = bounce + 1
 
     if xy_c[0]+size_ball > width+1 or xy_c[0]-size_ball < 0-1:
+        if loged == False:
+            logging.info("You got " + str(bounce) + " Bounces")
+            loged = True
         xy_c[0]=1000
         lost_text_field = my_font.render("Game Over", False, color)
         play_again_text = my_font.render("Play Again by clicking your mouse", False, color)
@@ -122,6 +132,8 @@ while running: #her startes vores whille loop
                 speed_x = 5
                 speed_y = 5
                 count = 10
+                loged = False
+                bounce = 0
     count = count - 1
 
     pygame.display.flip()
